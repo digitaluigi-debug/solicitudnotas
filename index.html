@@ -35,7 +35,7 @@ canvas{width:100%;height:auto;border-radius:8px;border:1px solid var(--line);dis
 
 <div class="card" id="cfg">
   <label for="agente">Nombre del agente (se guarda una sola vez)</label>
-  <input id="agente" type="text" placeholder="Ej. Agente 62 - Luis Palacios G.">
+  <input id="agente" type="text" placeholder="Agente No. y Nombre del Agente">
   <button id="guardar" type="button">Guardar agente</button>
 </div>
 
@@ -58,6 +58,7 @@ canvas{width:100%;height:auto;border-radius:8px;border:1px solid var(--line);dis
   <button id="compartir" type="button">Compartir imagen por WhatsApp</button>
   <a id="enlace" class="btn sec" target="_blank" rel="noopener">Abrir WhatsApp con el mensaje (link)</a>
   <button id="descargar" class="sec" type="button">Descargar imagen</button>
+  <button id="nuevo" type="button">Nuevo recibo</button>
   <p class="nota" id="nota"></p>
 </div>
 </main>
@@ -165,6 +166,13 @@ $('descargar').onclick = () => {
   const url = URL.createObjectURL(blobActual), a = document.createElement('a');
   a.href = url; a.download = 'recibo.png'; document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 2000);
+};
+$('nuevo').onclick = () => {
+  $('cantidad').value = ''; blobActual = null; textoActual = '';
+  $('nota').textContent = '';
+  $('salida').classList.add('oculto');
+  window.scrollTo({top:0,behavior:'smooth'});
+  $('cantidad').focus();
 };
 pantalla();
 </script>
