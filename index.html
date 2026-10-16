@@ -56,7 +56,6 @@ canvas{width:100%;height:auto;border-radius:8px;border:1px solid var(--line);dis
 <div class="card oculto" id="salida">
   <canvas id="lienzo" width="684" height="1080"></canvas>
   <button id="compartir" type="button">Compartir imagen por WhatsApp</button>
-  <a id="enlace" class="btn sec" target="_blank" rel="noopener">Abrir WhatsApp con el mensaje (link)</a>
   <button id="descargar" class="sec" type="button">Descargar imagen</button>
   <button id="nuevo" type="button">Nuevo recibo</button>
   <p class="nota" id="nota"></p>
@@ -145,7 +144,6 @@ $('generar').onclick = async () => {
   const metodo = $('metodo').value, folio = $('folio').value.trim() || '1-1', agente = leer('agente');
   const r = dibujar(cant, metodo, folio, agente);
   textoActual = 'Comprobante de pago - ' + EMPRESA + '\nTotal: ' + dinero(cant) + ' (' + metodo + ')\nFOLIO: ' + folio + '\nFecha: ' + r.fecha + '\nAgente: ' + agente + '\nGracias por su pago';
-  $('enlace').href = 'https://wa.me/?text=' + encodeURIComponent(textoActual);
   $('salida').classList.remove('oculto'); $('nota').textContent = '';
   lienzo.toBlob(b => { blobActual = b; }, 'image/png');
   guardarLS('metodo', metodo); guardarLS('folio', siguienteFolio(folio)); 
@@ -157,9 +155,9 @@ $('compartir').onclick = async () => {
   if (!blobActual) return;
   const archivo = new File([blobActual], 'recibo.png', {type:'image/png'});
   try{
-    if (navigator.canShare && navigator.canShare({files:[archivo]})){ await navigator.share({files:[archivo], text:textoActual}); return; }
+    if (navigator.canShare && navigator.canShare({files:[archivo]})){ await navigator.share({files:[archivo]}); return; }
   }catch(e){ if (e && e.name === 'AbortError') return; }
-  $('nota').textContent = 'Tu navegador no permite compartir la imagen directamente. Descárgala y adjúntala en WhatsApp, o usa el link con el mensaje de texto.';
+  $('nota').textContent = 'Tu navegador no permite compartir la imagen directamente. Descárgala y adjúntala en WhatsApp.';
 };
 $('descargar').onclick = () => {
   if (!blobActual) return;
