@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Generar pedido</title>
+<style>
+:root{--bg:#fff;--tx:#161616;--mut:#7d7d7d;--chip:#f3f2f1;--bd:#e4e4e4;--wa:#25d366;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121212;--tx:#f2f2f2;--mut:#9a9a9a;--chip:#262626;--bd:#2c2c2c;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#121212;--tx:#f2f2f2;--mut:#9a9a9a;--chip:#262626;--bd:#2c2c2c;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:-apple-system,"Segoe UI",system-ui,sans-serif;padding-bottom:100px}
+.wrap{max-width:640px;margin:auto;padding:0 16px}
+.top{padding:18px 0 4px;font-size:1.1rem;font-weight:700;color:var(--mut)}
+.sec{padding:14px 0 6px;border-bottom:1px solid var(--bd)}
+.sh{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.sh h2{margin:0;font-size:1.6rem;font-weight:600;text-transform:uppercase}
+.all{border:0;background:var(--chip);color:var(--tx);font-weight:600;font-size:1rem;padding:12px 22px;border-radius:99px}
+.row{display:flex;align-items:center;gap:14px;padding:12px 0}
+.im{width:80px;height:100px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:8px;background:var(--chip);overflow:hidden}
+.im img{width:100%;height:100%;object-fit:contain}
+.info{flex:1;min-width:0}
+.nm{font-weight:600;font-size:1.05rem;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.iva{color:var(--mut);font-weight:600;font-size:1rem;margin-top:2px}
+.pr{color:var(--mut);font-weight:600;font-size:1.1rem}
+.pz{color:var(--mut);font-weight:500;font-size:.95rem}
+.plus{width:64px;height:64px;flex:none;border:0;border-radius:14px;background:var(--chip);color:var(--tx);font-size:2rem;font-weight:300}
+.q{width:64px;flex:none;display:flex;flex-direction:column;align-items:center;background:var(--chip);border-radius:14px;padding:2px 0}
+.q button{border:0;background:none;color:var(--tx);font-size:1.5rem;width:100%;height:30px}
+.q span{font-weight:700}
+#bar{position:fixed;left:12px;right:12px;max-width:616px;margin:auto;bottom:calc(12px + env(safe-area-inset-bottom,0px));background:var(--tx);color:var(--bg);border:0;border-radius:14px;padding:16px 18px;display:none;justify-content:space-between;font-weight:700;font-size:1.05rem;z-index:10}
+#ov{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;z-index:20;align-items:flex-end}
+#sheet{background:var(--bg);width:100%;max-width:640px;margin:auto;max-height:92%;overflow:auto;border-radius:20px 20px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px))}
+#sheet h2{margin:0 0 6px}
+.it{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd)}
+.it .info{font-size:.95rem;font-weight:600}
+.it em{display:block;color:var(--mut);font-style:normal;font-weight:400;font-size:.85rem}
+.mini{display:flex;align-items:center;gap:8px}
+.mini button{width:34px;height:34px;border-radius:10px;border:0;background:var(--chip);color:var(--tx);font-size:1.2rem}
+input,textarea{width:100%;margin-top:10px;padding:12px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);color:var(--tx);font:inherit}
+.tot{display:flex;justify-content:space-between;font-size:1.2rem;font-weight:700;margin:14px 0}
+.go{width:100%;border:0;background:var(--wa);color:#06301a;font-weight:800;font-size:1.05rem;padding:15px;border-radius:12px}
+.cl{background:none;border:0;color:var(--mut);width:100%;padding:10px;margin-top:4px;font-size:1rem}
+</style>
+</head>
+<body>
+<div class="wrap"><div class="top" id="shop"></div><div id="list"></div></div>
+<button id="bar"><span id="bn"></span><span id="bt"></span></button>
+<div id="ov"><div id="sheet">
+  <h2>Tu pedido</h2>
+  <div id="items"></div>
+  <div class="tot"><span>Total</span><span id="tt"></span></div>
+  <button class="go" id="send">Enviar pedido por WhatsApp</button>
+  <button class="cl" id="close">Seguir comprando</button>
+</div></div>
+<script>
+// ========= CONFIGURA AQUÍ =========
+const WHATSAPP = "521XXXXXXXXXX"; // tu número con código de país, sin + ni espacios
+// Dirección de tus imágenes en GitHub (termina con /). Cada foto se llama como el código: 5000192-51811.jpg
+const IMG_BASE = "https://TU-USUARIO.github.io/TU-REPO/img/";
+const IMG_EXT = ".jpg";
+// Orden de las secciones en la página. Una sección sin productos muestra "Próximamente".
+const CATEGORIAS = ["Lavandería","Jabón de tocador","Alimento para mascota","Detergentes polvo","Líquidos","Dentífricos","Aceites"];
+const VISIBLES = 3; // productos que se ven por categoría antes de "Ver todos"
+const PRODUCTOS = [
+ // cod=código, n=producto, p=precio caja, pz=precio pieza, c=sección
+ {cod:"112",n:"TEPEYAC 50 P 200 G",p:558.76,pz:11.18,c:"Lavandería"},
+ {cod:"111",n:"TEPEYAC 25 P 400 G",p:558.76,pz:22.35,c:"Lavandería"},
+ {cod:"131",n:"TEPEYAC 25 P 400 G C/E",p:579.59,pz:23.18,c:"Lavandería"},
+ {cod:"141",n:"TEPEYAC BLANCO 25 P 400 G C/E",p:579.59,pz:23.18,c:"Lavandería"},
+ {cod:"312",n:"CORONA 50 P 200 G",p:558.76,pz:11.18,c:"Lavandería"},
+ {cod:"311",n:"CORONA 25 P 400 G",p:558.76,pz:22.35,c:"Lavandería"},
+ {cod:"341",n:"CORONA 25 P 400 G C/E",p:579.59,pz:23.18,c:"Lavandería"},
+ {cod:"343",n:"CORONA ROSA 25 P 400 G C/E",p:579.59,pz:23.18,c:"Lavandería"},
+ {cod:"410",n:"ROMA VEGETAL 25 P 400 G",p:576.40,pz:23.06,c:"Lavandería"},
+ {cod:"534",n:"ZOTE BLANCO 60 P 100 G",p:356.44,pz:5.94,c:"Lavandería"},
+ {cod:"564",n:"ZOTE ROSA 60 P 100 G",p:356.44,pz:5.94,c:"Lavandería"},
+ {cod:"532",n:"ZOTE BLANCO 50 P 200 G",p:579.59,pz:11.59,c:"Lavandería"},
+ {cod:"531",n:"ZOTE BLANCO 25 P 400 G",p:579.59,pz:23.18,c:"Lavandería"},
+ {cod:"562",n:"ZOTE ROSA 50 P 200 G",p:579.59,pz:11.59,c:"Lavandería"},
+ {cod:"561",n:"ZOTE ROSA 25 P 400 G",p:579.59,pz:23.18,c:"Lavandería"},
+ {cod:"521",n:"ZOTE AZUL 25 P 400 G",p:579.59,pz:23.18,c:"Lavandería"},
+ {cod:"587",n:"ZOTE BLANCO 18 P 250 G ESCAMAS",p:413.67,pz:22.98,c:"Lavandería"},
+ {cod:"585",n:"ZOTE BLANCO 16 P 500 G ESCAMAS",p:706.34,pz:44.15,c:"Lavandería"},
+ {cod:"1633",n:"DAROMA BLANCO 50 P 200 G",p:534.22,pz:10.68,c:"Lavandería"},
+ {cod:"1631",n:"DAROMA BLANCO 25 P 400 G",p:534.22,pz:21.37,c:"Lavandería"},
+ {cod:"1833",n:"CARISMA 25 P 400 G",p:591.24,pz:23.65,c:"Lavandería"},
+ {cod:"1831",n:"CARISMA 16 P 500 G ESCAMAS",p:720.80,pz:45.05,c:"Lavandería"},
+ {cod:"2761",n:"BLANCA NIEVES 25 P 400 G",p:534.22,pz:21.37,c:"Lavandería"},
+ {cod:"34301",n:"FESTIVAL DE KANES 20 KG ADULTO",p:705.54,pz:705.54,c:"Alimento para mascota"},
+ {cod:"34302",n:"FESTIVAL DE KANES 4 P 4 KG ADULTO",p:564.43,pz:141.11,c:"Alimento para mascota"},
+ {cod:"34303",n:"FESTIVAL DE KANES 5 P 2 KG ADULTO",p:352.77,pz:70.55,c:"Alimento para mascota"},
+ {cod:"34321",n:"FESTIVAL DE KANES 20 KG CACHORRO",p:705.54,pz:705.54,c:"Alimento para mascota"},
+ {cod:"34322",n:"FESTIVAL DE KANES 4 P 4 KG CACHORRO",p:564.43,pz:141.11,c:"Alimento para mascota"},
+ {cod:"34323",n:"FESTIVAL DE KANES 5 P 2 KG CACHORRO",p:352.77,pz:70.55,c:"Alimento para mascota"},
+ {cod:"50005",n:"GLICERINA NATURAL 12 B 500 ML",p:418.52,pz:34.88,c:"Líquidos"},
+ {cod:"50007",n:"GLICERINA VEGETAL 12 B 500 ML",p:418.52,pz:34.88,c:"Líquidos"},
+ {cod:"50010",n:"GLICERINA NATURAL 12 B 1 L",p:795.24,pz:66.27,c:"Líquidos"},
+ {cod:"50525",n:"ZOTE LIQUIDO AZUL 12 B 500 ML",p:241.71,pz:20.14,c:"Líquidos"},
+ {cod:"50536",n:"ZOTE LIQUIDO BLANCO 12 B 500 ML",p:241.71,pz:20.14,c:"Líquidos"},
+ {cod:"50565",n:"ZOTE LIQUIDO ROSA 12 B 500 ML",p:241.71,pz:20.14,c:"Líquidos"},
+ {cod:"50521",n:"ZOTE LIQUIDO AZUL 12 B 1 L",p:483.41,pz:40.28,c:"Líquidos"},
+ {cod:"50531",n:"ZOTE LIQUIDO BLANCO 12 B 1 L",p:483.41,pz:40.28,c:"Líquidos"},
+ {cod:"50561",n:"ZOTE LIQUIDO ROSA 12 B 1 L",p:483.41,pz:40.28,c:"Líquidos"},
+ {cod:"50535",n:"ZOTE LIQUIDO BLANCO 4 B 1 GAL",p:576.35,pz:144.09,c:"Líquidos"},
+ {cod:"50539",n:"ZOTE LIQUIDO BLANCO 2 B 5 L",p:379.63,pz:189.82,c:"Líquidos"},
+ {cod:"50666",n:"ROSA VENUS LIQUIDO ROSA 10 B 300 ML",p:179.24,pz:17.92,c:"Líquidos"},
+ {cod:"50668",n:"ROSA VENUS LIQUIDO SELVA NEGRA 10 B 300 ML",p:179.24,pz:17.92,c:"Líquidos"},
+ {cod:"50664",n:"ROSA VENUS LIQUIDO ROSA 12 B 500 ML",p:236.69,pz:19.72,c:"Líquidos"},
+ {cod:"51374",n:"MANILVA LIQUIDO 12 B 500 ML",p:236.69,pz:19.72,c:"Líquidos"},
+ {cod:"51918",n:"MURANO LIQUIDO FRAMBUESA 10 B 300 ML",p:179.24,pz:17.92,c:"Líquidos"},
+ {cod:"51914",n:"MURANO LIQUIDO MANDARINA 10 B 300 ML",p:179.24,pz:17.92,c:"Líquidos"},
+ {cod:"51907",n:"MURANO LIQUIDO PEPINO 10 B 300 ML",p:179.24,pz:17.92,c:"Líquidos"},
+ {cod:"51917",n:"MURANO LIQUIDO SELVA NEGRA 10 B 300 ML",p:179.24,pz:17.92,c:"Líquidos"},
+ {cod:"51909",n:"MURANO LIQUIDO VERBENA 10 B 300 ML",p:179.24,pz:17.92,c:"Líquidos"},
+ {cod:"51919",n:"MURANO LIQUIDO MANDARINA 12 B 500 ML",p:236.69,pz:19.72,c:"Líquidos"},
+ {cod:"51906",n:"MURANO LIQUIDO SELVA NEGRA 12 B 500 ML",p:236.69,pz:19.72,c:"Líquidos"},
+ {cod:"51841",n:"CARISMA SUAVIZANTE 12 B 500 ML",p:203.79,pz:16.98,c:"Líquidos"},
+ {cod:"51811",n:"CARISMA SUAVIZANTE 12 B 1 L",p:359.89,pz:29.99,c:"Líquidos"},
+ {cod:"51814",n:"CARISMA SUAVIZANTE 4 B 1 GAL",p:433.19,pz:108.30,c:"Líquidos"},
+ {cod:"51822",n:"CARISMA SUAVIZANTE SANDALO 12 B 1 L",p:359.89,pz:29.99,c:"Líquidos"},
+ {cod:"54101",n:"SUAZUL SUAVIZANTE 12 B 1 L",p:359.89,pz:29.99,c:"Líquidos"},
+ {cod:"54223",n:"ROMA DETERGENTE LIQ 12 B 500 ML",p:194.51,pz:16.21,c:"Líquidos"},
+ {cod:"54211",n:"ROMA DETERGENTE LIQ 12 B 1 L",p:358.54,pz:29.88,c:"Líquidos"},
+ {cod:"54221",n:"ROMA DETERGENTE LIQ 4 B 1 GAL",p:411.45,pz:102.86,c:"Líquidos"},
+ {cod:"54230",n:"ROMA DETERGENTE LIQ 1 B 10 L",p:268.73,pz:268.73,c:"Líquidos"},
+ {cod:"51843",n:"CARISMA DETERGENTE LIQ 12 B 500 ML",p:194.51,pz:16.21,c:"Líquidos"},
+ {cod:"51833",n:"CARISMA DETERGENTE LIQ 12 B 1 L",p:390.31,pz:32.53,c:"Líquidos"},
+ {cod:"51834",n:"CARISMA DETERGENTE LIQ 4 B 1 GAL",p:526.72,pz:131.68,c:"Líquidos"},
+ {cod:"51848",n:"CARISMA DETERGENTE LIQ 2 B 5 L",p:347.91,pz:173.96,c:"Líquidos"},
+ {cod:"51845",n:"CARISMA DETERGENTE LIQ 1 B 10 L",p:297.32,pz:297.32,c:"Líquidos"},
+ {cod:"52626",n:"FOCA DETERGENTE LIQ 12 B 500 ML",p:194.51,pz:16.21,c:"Líquidos"},
+ {cod:"52621",n:"FOCA DETERGENTE LIQ 12 B 1 L",p:382.54,pz:31.88,c:"Líquidos"},
+ {cod:"52651",n:"FOCA DETERGENTE LIQ 4 B 1 GAL",p:473.65,pz:118.41,c:"Líquidos"},
+ {cod:"52644",n:"FOCA DETERGENTE LIQ 2 B 5.5 L",p:344.19,pz:172.10,c:"Líquidos"},
+ {cod:"52638",n:"FOCA DETERGENTE LIQ 1 B 10 L",p:276.17,pz:276.17,c:"Líquidos"},
+ {cod:"52726",n:"BLANCA NIEVES DET LIQ 12 B 500 ML",p:194.51,pz:16.21,c:"Líquidos"},
+ {cod:"52761",n:"BLANCA NIEVES DET LIQ 12 B 1 L",p:382.54,pz:31.88,c:"Líquidos"},
+ {cod:"52767",n:"BLANCA NIEVES DET LIQ 4 B 1 GAL",p:473.65,pz:118.41,c:"Líquidos"},
+ {cod:"52724",n:"BLANCA NIEVES DET LIQ 1 B 10 L",p:285.88,pz:285.88,c:"Líquidos"},
+ {cod:"59001",n:"DETERGENTE LIQ SURTIDO 12 B 500 ML",p:210.24,pz:17.52,c:"Líquidos"},
+ {cod:"53073",n:"BRILOZA LIQUIDO LIMON 12 B 730 ML",p:332.22,pz:27.69,c:"Líquidos"},
+ {cod:"53080",n:"BRILOZA LIQUIDO LIMA-JENGIBRE 12 B 730 ML",p:332.22,pz:27.69,c:"Líquidos"},
+ {cod:"54012",n:"COLIBRI AMARILLO 24 B 500 ML",p:275.96,pz:11.50,c:"Líquidos"},
+ {cod:"54042",n:"COLIBRI AZUL 24 B 500 ML",p:275.96,pz:11.50,c:"Líquidos"},
+ {cod:"54092",n:"COLIBRI LILA 24 B 500 ML",p:275.96,pz:11.50,c:"Líquidos"},
+ {cod:"54062",n:"COLIBRI ROSA 24 B 500 ML",p:275.96,pz:11.50,c:"Líquidos"},
+ {cod:"54078",n:"COLIBRI VERDE LIMON 24 B 500 ML",p:275.96,pz:11.50,c:"Líquidos"},
+ {cod:"54011",n:"COLIBRI AMARILLO 12 B 1 L",p:242.84,pz:20.24,c:"Líquidos"},
+ {cod:"54041",n:"COLIBRI AZUL 12 B 1 L",p:242.84,pz:20.24,c:"Líquidos"},
+ {cod:"54091",n:"COLIBRI LILA 12 B 1 L",p:242.84,pz:20.24,c:"Líquidos"},
+ {cod:"54061",n:"COLIBRI ROSA 12 B 1 L",p:242.84,pz:20.24,c:"Líquidos"},
+ {cod:"54077",n:"COLIBRI VERDE LIMON 12 B 1 L",p:242.84,pz:20.24,c:"Líquidos"},
+ {cod:"54089",n:"COLIBRI LILA 4 B 1 GAL",p:271.75,pz:67.94,c:"Líquidos"},
+ {cod:"54067",n:"COLIBRI ROSA 4 B 1 GAL",p:271.75,pz:67.94,c:"Líquidos"},
+ {cod:"60944",n:"BRIDEN 50 P 50 ML",p:903.49,pz:18.07,c:"Dentífricos"},
+ {cod:"60955",n:"BRIDEN 10 P 50 ML EXHIBIDOR",p:180.70,pz:18.07,c:"Dentífricos"},
+ {cod:"60939",n:"BRIDEN 25 P 100 ML",p:679.97,pz:27.20,c:"Dentífricos"},
+ {cod:"60950",n:"BRIDEN 10 P 100 ML EXHIBIDOR",p:271.97,pz:27.20,c:"Dentífricos"},
+ {cod:"60924",n:"BRIDEN CARDAMOMO 25 P 100 ML",p:965.53,pz:38.62,c:"Dentífricos"},
+ {cod:"60925",n:"BRIDEN CARDAMOMO 6 P 100 ML",p:231.73,pz:38.62,c:"Dentífricos"},
+ {cod:"71012",n:"ACEITE 1-2-3 24 B 500 ML",p:542.98,pz:22.62,c:"Aceites"},
+ {cod:"71040",n:"ACEITE 1-2-3 15 B 750 ML",p:498.81,pz:33.25,c:"Aceites"},
+ {cod:"71011",n:"ACEITE 1-2-3 12 B 1 L",p:532.05,pz:44.34,c:"Aceites"},
+ {cod:"71021",n:"ACEITE 1-2-3 9 B 1 L",p:399.06,pz:44.34,c:"Aceites"},
+ {cod:"71060",n:"ACEITE 1-2-3 4 B 1 GAL",p:645.42,pz:161.35,c:"Aceites"},
+ {cod:"71041",n:"ACEITE 1-2-3 1 B 10 L",p:428.40,pz:428.40,c:"Aceites"},
+ {cod:"71070",n:"ACEITE 1-2-3 GIRASOL 12 B 1 L",p:504.11,pz:42.01,c:"Aceites"},
+ {cod:"71072",n:"ACEITE 1-2-3 MAIZ 12 B 1 L",p:532.05,pz:44.34,c:"Aceites"},
+ {cod:"71214",n:"ACEITE GRANO DE ORO VEGETAL 24 B 500 ML",p:523.31,pz:21.80,c:"Aceites"},
+ {cod:"71211",n:"ACEITE GRANO DE ORO VEGETAL 12 B 1 L",p:523.50,pz:43.63,c:"Aceites"},
+ {cod:"71213",n:"ACEITE GRANO DE ORO VEGETAL 4 B 1 GAL",p:647.23,pz:161.81,c:"Aceites"},
+ {cod:"71225",n:"ACEITE GRANO DE ORO VEGETAL 1 B 20 L",p:739.68,pz:739.68,c:"Aceites"},
+ {cod:"71230",n:"ACEITE GRANO DE ORO VEGETAL ALTO FREIDO 1 B 20 L",p:801.52,pz:801.52,c:"Aceites"},
+ {cod:"71219",n:"ACEITE GRANO DE ORO SOYA 1 B 20 L",p:790.92,pz:790.92,c:"Aceites"},
+ {cod:"71215",n:"ACEITE GRANO DE ORO CANOLA 1 B 20 L",p:776.27,pz:776.27,c:"Aceites"},
+ {cod:"71226",n:"ACEITE GRANO DE ORO MAIZ 1 B 20 L",p:791.85,pz:791.85,c:"Aceites"},
+ {cod:"71227",n:"ACEITE GRANO DE ORO GIRASOL 1 B 20 L",p:781.90,pz:781.90,c:"Aceites"},
+ {cod:"72971",n:"ACEITE MONARCA 12 B 1 L",p:496.29,pz:41.36,c:"Aceites"},
+ {cod:"71120",n:"ACEITE PIRAMIDE SOYA 24 B 500 ML",p:556.84,pz:23.20,c:"Aceites"},
+ {cod:"71121",n:"ACEITE PIRAMIDE SOYA 12 B 1 L",p:556.84,pz:46.40,c:"Aceites"},
+ {cod:"77507",n:"MANTECA MIXTA 1-2-3 12 P 1 KG",p:521.59,pz:43.47,c:"Aceites"},
+ {cod:"77508",n:"MANTECA VEGETAL 1-2-3 12 P 1 KG",p:521.59,pz:43.47,c:"Aceites"},
+ {cod:"77501",n:"MANTECA VEGETAL GRANO DE ORO 1 P 24 KG",p:905.07,pz:905.07,c:"Aceites"},
+ {cod:"77503",n:"MANTECA VEGETAL GRANO DE ORO CF 1 P 24 KG",p:905.07,pz:905.07,c:"Aceites"},
+ {cod:"77506",n:"MANTECA MIXTA GRANO DE ORO 1 P 24 KG",p:882.20,pz:882.20,c:"Aceites"},
+ {cod:"77504",n:"MANTECA VEGETAL PIRAMIDE 12 P 1 KG",p:521.59,pz:43.47,c:"Aceites"},
+ {cod:"73153",n:"MARGARINA MULTIUSOS GRANO DE ORO 10 P 1 KG",p:421.20,pz:42.12,c:"Aceites"},
+ {cod:"10122",n:"TEPEYAC AMARILLO 60 P 100 G",p:439.23,pz:7.32,c:"Jabón de tocador"},
+ {cod:"10132",n:"TEPEYAC ROSA 60 P 100 G",p:439.23,pz:7.32,c:"Jabón de tocador"},
+ {cod:"10142",n:"TEPEYAC VERDE 60 P 100 G",p:439.23,pz:7.32,c:"Jabón de tocador"},
+ {cod:"10192",n:"TEPEYAC LILA 60 P 100 G",p:439.23,pz:7.32,c:"Jabón de tocador"},
+ {cod:"10121",n:"TEPEYAC AMARILLO 40 P 150 G",p:439.23,pz:10.98,c:"Jabón de tocador"},
+ {cod:"10131",n:"TEPEYAC ROSA 40 P 150 G",p:439.23,pz:10.98,c:"Jabón de tocador"},
+ {cod:"10141",n:"TEPEYAC VERDE 40 P 150 G",p:439.23,pz:10.98,c:"Jabón de tocador"},
+ {cod:"10191",n:"TEPEYAC LILA 40 P 150 G",p:439.23,pz:10.98,c:"Jabón de tocador"},
+ {cod:"10111",n:"TEPEYAC AMARILLO 30 P 200 G",p:439.23,pz:14.64,c:"Jabón de tocador"},
+ {cod:"10112",n:"TEPEYAC ROSA 30 P 200 G",p:439.23,pz:14.64,c:"Jabón de tocador"},
+ {cod:"10113",n:"TEPEYAC VERDE 30 P 200 G",p:439.23,pz:14.64,c:"Jabón de tocador"},
+ {cod:"10114",n:"TEPEYAC LILA 30 P 200 G",p:439.23,pz:14.64,c:"Jabón de tocador"},
+ {cod:"10196",n:"TEPEYAC SURTIDO 60 P 100 G",p:439.23,pz:7.32,c:"Jabón de tocador"},
+ {cod:"10635",n:"ROSA VENUS BLANCO 240 P 25 G",p:476.29,pz:1.98,c:"Jabón de tocador"},
+ {cod:"10694",n:"ROSA VENUS BLANCO 100 P 25 G CHAROLA",p:202.38,pz:2.02,c:"Jabón de tocador"},
+ {cod:"10638",n:"ROSA VENUS BLANCO 60 P 100 G",p:439.23,pz:7.32,c:"Jabón de tocador"},
+ {cod:"10637",n:"ROSA VENUS BLANCO 40 P 150 G",p:439.23,pz:10.98,c:"Jabón de tocador"},
+ {cod:"10633",n:"ROSA VENUS BLANCO 30 P 200 G EXHIBIDOR",p:439.23,pz:14.64,c:"Jabón de tocador"},
+ {cod:"10640",n:"ROSA VENUS BLANCO 10 PAQ/4 P 150 G",p:439.23,pz:109.81,c:"Jabón de tocador"},
+ {cod:"10655",n:"ROSA VENUS ROSA 240 P 25 G",p:476.29,pz:1.98,c:"Jabón de tocador"},
+ {cod:"10695",n:"ROSA VENUS ROSA 100 P 25 G CHAROLA",p:202.38,pz:2.02,c:"Jabón de tocador"},
+ {cod:"10664",n:"ROSA VENUS ROSA 120 P 50 G",p:457.09,pz:3.81,c:"Jabón de tocador"},
+ {cod:"10662",n:"ROSA VENUS ROSA 60 P 100 G",p:439.23,pz:7.32,c:"Jabón de tocador"},
+ {cod:"10651",n:"ROSA VENUS ROSA 40 P 150 G",p:439.23,pz:10.98,c:"Jabón de tocador"},
+ {cod:"10650",n:"ROSA VENUS ROSA 30 P 200 G EXHIBIDOR",p:439.23,pz:14.64,c:"Jabón de tocador"},
+ {cod:"10649",n:"ROSA VENUS ROSA 10 PAQ/4 P 150 G",p:439.23,pz:109.81,c:"Jabón de tocador"},
+ {cod:"10609",n:"ROSA VENUS AVENA 40 P 150 G",p:439.23,pz:10.98,c:"Jabón de tocador"},
+ {cod:"10636",n:"ROSA VENUS AVENA 30 P 200 G EXHIBIDOR",p:439.23,pz:14.64,c:"Jabón de tocador"},
+ {cod:"10600",n:"ROSA VENUS ANTIBACTERIAL 40 P 150 G",p:439.23,pz:10.98,c:"Jabón de tocador"},
+ {cod:"10687",n:"ROSA VENUS SURTIDO 60 P 100 G",p:439.23,pz:7.32,c:"Jabón de tocador"},
+ {cod:"10693",n:"ROSA VENUS SURTIDO 40 P 150 G",p:439.23,pz:10.98,c:"Jabón de tocador"},
+ {cod:"11331",n:"MANILVA 40 P 150 G",p:494.36,pz:12.36,c:"Jabón de tocador"},
+ {cod:"11335",n:"MANILVA 30 P 200 G",p:492.96,pz:16.43,c:"Jabón de tocador"},
+ {cod:"11341",n:"MANILVA HERBAL 40 P 150 G",p:494.36,pz:12.36,c:"Jabón de tocador"},
+ {cod:"11537",n:"MANILA 40 P 135 G",p:291.76,pz:7.29,c:"Jabón de tocador"},
+ {cod:"11901",n:"MURANO PEPINO 40 P 150 G",p:499.32,pz:12.48,c:"Jabón de tocador"},
+ {cod:"11902",n:"MURANO MANDARINA 40 P 150 G",p:499.32,pz:12.48,c:"Jabón de tocador"},
+ {cod:"11903",n:"MURANO VERBENA 40 P 150 G",p:499.32,pz:12.48,c:"Jabón de tocador"},
+ {cod:"11907",n:"MURANO SELVA NEGRA 40 P 150 G",p:499.32,pz:12.48,c:"Jabón de tocador"},
+ {cod:"11928",n:"MURANO FRAMBUESA/CHIA 40 P 150 G",p:499.32,pz:12.48,c:"Jabón de tocador"},
+ {cod:"11924",n:"MURANO LIMON/CHIA 40 P 150 G",p:499.32,pz:12.48,c:"Jabón de tocador"},
+ {cod:"11909",n:"MURANO PEPINO 4 PAQ/10 P 150 G",p:499.32,pz:49.93,c:"Jabón de tocador"},
+ {cod:"11910",n:"MURANO MANDARINA 4 PAQ/10 P 150 G",p:499.32,pz:49.93,c:"Jabón de tocador"},
+ {cod:"11911",n:"MURANO VERBENA 4 PAQ/10 P 150 G",p:499.32,pz:49.93,c:"Jabón de tocador"},
+ {cod:"11908",n:"MURANO SELVA NEGRA 4 PAQ/10 P 150 G",p:499.32,pz:49.93,c:"Jabón de tocador"},
+ {cod:"11930",n:"MURANO FRAMBUESA/CHIA 4 PAQ/10 P 150 G",p:499.32,pz:49.93,c:"Jabón de tocador"},
+ {cod:"11926",n:"MURANO LIMON/CHIA 4 PAQ/10 P 150 G",p:499.32,pz:49.93,c:"Jabón de tocador"},
+ {cod:"11913",n:"MURANO PEPINO 1 PAQ/10 P 150 G",p:124.87,pz:12.49,c:"Jabón de tocador"},
+ {cod:"11914",n:"MURANO MANDARINA 1 PAQ/10 P 150 G",p:124.87,pz:12.49,c:"Jabón de tocador"},
+ {cod:"11915",n:"MURANO VERBENA 1 PAQ/10 P 150 G",p:124.87,pz:12.49,c:"Jabón de tocador"},
+ {cod:"11912",n:"MURANO SELVA NEGRA 1 PAQ/10 P 150 G",p:124.87,pz:12.49,c:"Jabón de tocador"},
+ {cod:"11931",n:"MURANO FRAMBUESA/CHIA 1 PAQ/10 P 150 G",p:124.87,pz:12.49,c:"Jabón de tocador"},
+ {cod:"11927",n:"MURANO LIMON/CHIA 1 PAQ/10 P 150 G",p:124.87,pz:12.49,c:"Jabón de tocador"},
+ {cod:"11920",n:"MURANO SURTIDO 24 P 150 G",p:299.58,pz:12.48,c:"Jabón de tocador"},
+ {cod:"12015",n:"TUIT 16 P 100 G CHAROLA",p:143.21,pz:8.95,c:"Jabón de tocador"},
+ {cod:"12011",n:"TUIT 60 P 100 G",p:537.13,pz:8.95,c:"Jabón de tocador"},
+ {cod:"12311",n:"MADI VEGETAL 40 P 150 G",p:547.92,pz:13.70,c:"Jabón de tocador"},
+ {cod:"12313",n:"MADI VEGETAL 4 PAQ/10 P 150 G",p:547.92,pz:54.79,c:"Jabón de tocador"},
+ {cod:"12315",n:"MADI VEGETAL 1 PAQ/10 P 150 G",p:137.01,pz:13.70,c:"Jabón de tocador"},
+ {cod:"12403",n:"DONZA FRESIA KARITE 60 P 100 G",p:809.69,pz:13.49,c:"Jabón de tocador"},
+ {cod:"12404",n:"DONZA EXOTICA KARITE 60 P 100 G",p:809.69,pz:13.49,c:"Jabón de tocador"},
+ {cod:"12405",n:"DONZA SURTIDO 16 P 100 G CHAROLA",p:215.49,pz:13.47,c:"Jabón de tocador"},
+ {cod:"13331",n:"VENUS BLANCO 40 P 150 G",p:456.71,pz:11.42,c:"Jabón de tocador"},
+ {cod:"13361",n:"VENUS ROSA 40 P 150 G",p:456.71,pz:11.42,c:"Jabón de tocador"},
+ {cod:"13321",n:"VENUS AZUL 40 P 150 G",p:456.71,pz:11.42,c:"Jabón de tocador"},
+ {cod:"13327",n:"VENUS BLANCO 30 P 200 G",p:456.71,pz:15.22,c:"Jabón de tocador"},
+ {cod:"13328",n:"VENUS ROSA 30 P 200 G",p:456.71,pz:15.22,c:"Jabón de tocador"},
+ {cod:"13326",n:"VENUS AZUL 30 P 200 G",p:456.71,pz:15.22,c:"Jabón de tocador"},
+ {cod:"13365",n:"VENUS SURTIDO 60 P 100 G",p:456.71,pz:7.61,c:"Jabón de tocador"},
+ {cod:"13680",n:"CORAL AZUL 30 P 100 G",p:208.48,pz:6.95,c:"Jabón de tocador"},
+ {cod:"13681",n:"CORAL BEIGE 30 P 100 G",p:208.48,pz:6.95,c:"Jabón de tocador"},
+ {cod:"13682",n:"CORAL ROSA 30 P 100 G",p:208.48,pz:6.95,c:"Jabón de tocador"},
+ {cod:"13683",n:"CORAL SURTIDO 30 P 100 G",p:208.48,pz:6.95,c:"Jabón de tocador"},
+ {cod:"18155",n:"TERSSO 240 P 25 G",p:521.22,pz:2.17,c:"Jabón de tocador"},
+ {cod:"18157",n:"TERSSO 50 P 120 G",p:494.20,pz:9.88,c:"Jabón de tocador"},
+ {cod:"18168",n:"TERSSO 12 P 120 G CHAROLA",p:118.56,pz:9.88,c:"Jabón de tocador"},
+ {cod:"18156",n:"TERSSO 30 P 200 G",p:448.24,pz:14.94,c:"Jabón de tocador"},
+ {cod:"18167",n:"TERSSO 12 P 200 G CHAROLA",p:179.30,pz:14.94,c:"Jabón de tocador"},
+ {cod:"10110",n:"TOCADOR SURTIDO 56 P 150 G",p:617.40,pz:11.03,c:"Jabón de tocador"},
+ {cod:"40156",n:"TEPEYAC 20 P 500 G",p:347.48,pz:17.37,c:"Detergentes polvo"},
+ {cod:"40201",n:"DO}A BLANCA 10 P 1 KG",p:347.64,pz:34.76,c:"Detergentes polvo"},
+ {cod:"40202",n:"DO}A BLANCA 20 P 500 G",p:347.64,pz:17.38,c:"Detergentes polvo"},
+ {cod:"40203",n:"DO}A BLANCA 40 P 250 G",p:347.86,pz:8.70,c:"Detergentes polvo"},
+ {cod:"40450",n:"ROMA 1 P 10 KG",p:395.11,pz:395.11,c:"Detergentes polvo"},
+ {cod:"40448",n:"ROMA 4 P 5 KG",p:798.96,pz:199.74,c:"Detergentes polvo"},
+ {cod:"40443",n:"ROMA 10 P 2 KG",p:801.12,pz:80.11,c:"Detergentes polvo"},
+ {cod:"40454",n:"ROMA 10 P 1 KG",p:402.61,pz:40.26,c:"Detergentes polvo"},
+ {cod:"40456",n:"ROMA 20 P 500 G",p:405.09,pz:20.25,c:"Detergentes polvo"},
+ {cod:"40457",n:"ROMA 40 P 250 G",p:405.09,pz:10.13,c:"Detergentes polvo"},
+ {cod:"40459",n:"ROMA 100 P 100 G",p:512.86,pz:5.13,c:"Detergentes polvo"},
+ {cod:"41836",n:"CARISMA 10 P 2 KG",p:862.82,pz:86.28,c:"Detergentes polvo"},
+ {cod:"41839",n:"CARISMA 10 P 1 KG",p:433.46,pz:43.35,c:"Detergentes polvo"},
+ {cod:"41840",n:"CARISMA 20 P 500 G",p:435.57,pz:21.78,c:"Detergentes polvo"},
+ {cod:"41842",n:"CARISMA 40 P 250 G",p:435.51,pz:10.89,c:"Detergentes polvo"},
+ {cod:"42608",n:"FOCA 1 P 10 KG",p:404.63,pz:404.63,c:"Detergentes polvo"},
+ {cod:"42650",n:"FOCA 4 P 5 KG",p:818.81,pz:204.70,c:"Detergentes polvo"},
+ {cod:"42643",n:"FOCA 10 P 2 KG",p:820.86,pz:82.09,c:"Detergentes polvo"},
+ {cod:"42664",n:"FOCA 10 P 1 KG",p:412.43,pz:41.24,c:"Detergentes polvo"},
+ {cod:"42666",n:"FOCA 20 P 500 G",p:414.42,pz:20.72,c:"Detergentes polvo"},
+ {cod:"42667",n:"FOCA 40 P 250 G",p:414.42,pz:10.36,c:"Detergentes polvo"},
+ {cod:"42669",n:"FOCA 100 P 100 G",p:514.91,pz:5.15,c:"Detergentes polvo"},
+ {cod:"42750",n:"BLANCA NIEVES 1 P 10 KG",p:384.16,pz:384.16,c:"Detergentes polvo"},
+ {cod:"42749",n:"BLANCA NIEVES 4 P 5 KG",p:777.22,pz:194.31,c:"Detergentes polvo"},
+ {cod:"42743",n:"BLANCA NIEVES 10 P 2 KG",p:779.33,pz:77.93,c:"Detergentes polvo"},
+ {cod:"42764",n:"BLANCA NIEVES 10 P 1 KG",p:391.82,pz:39.18,c:"Detergentes polvo"},
+ {cod:"42766",n:"BLANCA NIEVES 20 P 500 G",p:395.60,pz:19.78,c:"Detergentes polvo"},
+ {cod:"42767",n:"BLANCA NIEVES 40 P 250 G",p:395.60,pz:9.89,c:"Detergentes polvo"},
+ {cod:"42769",n:"BLANCA NIEVES 100 P 100 G",p:500.56,pz:5.01,c:"Detergentes polvo"},
+ {cod:"42832",n:"PURO SOL 4 P 5 KG",p:750.63,pz:187.66,c:"Detergentes polvo"},
+ {cod:"42833",n:"PURO SOL 10 P 2 KG",p:752.62,pz:75.26,c:"Detergentes polvo"},
+ {cod:"42844",n:"PURO SOL 10 P 1 KG",p:378.23,pz:37.82,c:"Detergentes polvo"},
+ {cod:"42846",n:"PURO SOL 20 P 500 G",p:380.22,pz:19.01,c:"Detergentes polvo"},
+ {cod:"42847",n:"PURO SOL 40 P 250 G",p:380.22,pz:9.51,c:"Detergentes polvo"},
+ {cod:"43054",n:"BRILOZA 10 P 1 KG",p:343.49,pz:34.35,c:"Detergentes polvo"},
+ {cod:"43056",n:"BRILOZA 20 P 500 G",p:346.73,pz:17.34,c:"Detergentes polvo"}
+];
+// ==================================
+const $=id=>document.getElementById(id);
+const money=n=>"$"+n.toLocaleString("es-MX",{minimumFractionDigits:2,maximumFractionDigits:2});
+let cart={},open={};
+document.title="Generar pedido";$("shop").textContent="Generar pedido";
+const cats=[...CATEGORIAS,...new Set(PRODUCTOS.map(p=>p.c))].filter((c,i,a)=>a.indexOf(c)===i);
+const byCod=c=>PRODUCTOS.find(p=>p.cod===c);
+function ctrl(p){const q=cart[p.cod]||0;
+ return q?`<div class="q"><button data-a="${p.cod}">+</button><span>${q}</span><button data-m="${p.cod}">−</button></div>`:`<button class="plus" data-a="${p.cod}" aria-label="Agregar">+</button>`}
+function draw(){
+ $("list").innerHTML=cats.map(c=>{
+  const all=PRODUCTOS.filter(p=>p.c===c),show=open[c]?all:all.slice(0,VISIBLES);
+  return `<section class="sec"><div class="sh"><h2>${c}</h2>`+(all.length>VISIBLES?`<button class="all" data-t="${c}">${open[c]?"Ver menos":"Ver todos"}</button>`:"")+`</div>`+
+  (all.length?"":`<p style="color:var(--mut);padding:8px 0 16px;margin:0">Próximamente</p>`)+show.map(p=>`<div class="row"><div class="im"><img src="${IMG_BASE+p.cod+IMG_EXT}" alt="" loading="lazy" onerror="this.remove()"></div><div class="info"><div class="nm">${p.n}</div>${p.c==="Aceites"?"":`<div class="iva">Precio incluye IVA</div>`}<div class="pr">Caja ${money(p.p)}</div><div class="pz">Pieza ${money(p.pz)}</div></div>${ctrl(p)}</div>`).join("")+`</section>`}).join("");
+ const n=Object.values(cart).reduce((a,b)=>a+b,0);
+ $("bar").style.display=n?"flex":"none";$("bn").textContent="🛒 Ver pedido ("+n+")";$("bt").textContent=money(total());
+ if($("ov").style.display==="flex"){drawCart();if(!n)$("ov").style.display="none"}}
+function total(){return Object.entries(cart).reduce((s,[c,q])=>s+byCod(c).p*q,0)}
+function drawCart(){
+ $("items").innerHTML=Object.keys(cart).map(c=>{const p=byCod(c);return `<div class="it"><div class="info">${p.n}<em>${money(p.p)} por caja</em></div><div class="mini"><button data-m="${c}">−</button><b>${cart[c]}</b><button data-a="${c}">+</button></div></div>`}).join("");
+ $("tt").textContent=money(total())}
+document.addEventListener("click",e=>{const d=e.target.dataset;
+ if(d.t){open[d.t]=!open[d.t]}
+ else if(d.a){cart[d.a]=(cart[d.a]||0)+1}
+ else if(d.m){cart[d.m]--;if(cart[d.m]<=0)delete cart[d.m]}
+ else return;
+ draw()});
+$("bar").onclick=()=>{drawCart();$("ov").style.display="flex"};
+$("close").onclick=()=>$("ov").style.display="none";
+$("ov").onclick=e=>{if(e.target===$("ov"))$("ov").style.display="none"};
+// ---------- Imagen del pedido (agrupada por categoría) ----------
+function buildOrderImage(){
+ const W=600,S=2,PAD=24,NAMEW=300,QX=400,F='-apple-system,"Segoe UI",Arial,sans-serif';
+ const groups=cats.map(c=>({c,items:Object.keys(cart).map(byCod).filter(p=>p.c===c)})).filter(g=>g.items.length);
+ const meas=document.createElement("canvas").getContext("2d");
+ const wrap=(t,w,font)=>{meas.font=font;const out=[];let cur="";
+  for(const word of t.split(/\s+/)){const x=cur?cur+" "+word:word;
+   if(meas.measureText(x).width<=w||!cur)cur=x;else{out.push(cur);cur=word}}
+  if(cur)out.push(cur);return out};
+ const NF='600 15px '+F;
+ const rows=groups.map(g=>g.items.map(p=>({p,lines:wrap(p.n,NAMEW,NF)})));
+ let H=PAD+56+10;
+ rows.forEach(rs=>{H+=38;rs.forEach(r=>{H+=r.lines.length*19+20+14})});
+ H+=70+PAD;
+ const cv=document.createElement("canvas");cv.width=W*S;cv.height=H*S;
+ const x=cv.getContext("2d");x.scale(S,S);
+ x.fillStyle="#fff";x.fillRect(0,0,W,H);
+ let y=PAD;
+ x.fillStyle="#161616";x.font='700 26px '+F;x.textBaseline="alphabetic";x.textAlign="left";x.fillText("Pedido",PAD,y+26);
+ x.fillStyle="#7d7d7d";x.font='500 14px '+F;x.textAlign="right";
+ x.fillText(new Date().toLocaleDateString("es-MX",{day:"2-digit",month:"long",year:"numeric"}),W-PAD,y+24);
+ y+=56;x.fillStyle="#e4e4e4";x.fillRect(PAD,y,W-2*PAD,1);y+=10;
+ let cajas=0,prods=0;
+ groups.forEach((g,gi)=>{
+  const sub=g.items.reduce((s,p)=>s+p.p*cart[p.cod],0);
+  x.fillStyle="#f3f2f1";x.fillRect(PAD,y,W-2*PAD,32);
+  x.fillStyle="#161616";x.font='700 15px '+F;x.textAlign="left";x.fillText(g.c.toUpperCase(),PAD+10,y+21);
+  x.fillStyle="#7d7d7d";x.font='600 14px '+F;x.textAlign="right";x.fillText("Subtotal "+money(sub),W-PAD-10,y+21);
+  y+=38;
+  rows[gi].forEach(r=>{
+   const q=cart[r.p.cod];cajas+=q;prods++;
+   x.fillStyle="#161616";x.font=NF;x.textAlign="left";
+   r.lines.forEach((l,i)=>x.fillText(l,PAD+10,y+15+i*19));
+   const by=y+15+(r.lines.length-1)*19+19;
+   x.fillStyle="#7d7d7d";x.font='400 13px '+F;x.fillText(money(r.p.p)+" por caja",PAD+10,by);
+   x.fillStyle="#161616";x.font='700 16px '+F;x.textAlign="center";x.fillText(q+(q===1?" caja":" cajas"),QX+20,y+15);
+   x.textAlign="right";x.fillText(money(r.p.p*q),W-PAD-10,y+15);
+   y+=r.lines.length*19+20;
+   x.fillStyle="#e4e4e4";x.fillRect(PAD+10,y+6,W-2*PAD-20,1);y+=14;
+  });
+ });
+ y+=6;
+ x.fillStyle="#161616";x.beginPath();x.roundRect?x.roundRect(PAD,y,W-2*PAD,52,12):x.rect(PAD,y,W-2*PAD,52);x.fill();
+ x.fillStyle="#fff";x.textAlign="left";x.font='700 15px '+F;x.fillText("TOTAL · "+prods+(prods===1?" producto":" productos")+" · "+cajas+(cajas===1?" caja":" cajas"),PAD+16,y+32);
+ x.textAlign="right";x.font='800 20px '+F;x.fillText(money(total()),W-PAD-16,y+33);
+ return cv;
+}
+$("send").onclick=()=>{
+ if(!Object.keys(cart).length)return;
+ const cv=buildOrderImage();
+ cv.toBlob(blob=>{
+  const file=new File([blob],"pedido.png",{type:"image/png"});
+  if(navigator.canShare&&navigator.canShare({files:[file]})){
+   // Celular: abre el menú de compartir; elige WhatsApp y tu contacto
+   navigator.share({files:[file],text:"Pedido"}).catch(()=>{});
+  }else{
+   // Computadora: descarga la imagen y abre el chat para adjuntarla
+   const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="pedido.png";
+   document.body.appendChild(a);a.click();a.remove();
+   window.open("https://wa.me/"+WHATSAPP+"?text="+encodeURIComponent("Pedido (imagen adjunta)"),"_blank");
+  }
+ },"image/png");
+};
+draw();
+</script>
+</body>
+</html>
