@@ -53,6 +53,7 @@ input,textarea{width:100%;margin-top:10px;padding:12px;border:1px solid var(--bd
   <div class="tot"><span>Total</span><span id="tt"></span></div>
   <button class="go" id="send">Enviar pedido por WhatsApp</button>
   <p id="hint"></p>
+  <button class="go" id="txt" style="display:none;margin-top:10px">Enviar pedido como texto por WhatsApp</button>
   <button class="cl" id="close">Seguir comprando</button>
 </div></div>
 <script>
@@ -325,7 +326,7 @@ function total(){return Object.entries(cart).reduce((s,[c,q])=>s+byCod(c).p*q,0)
 function drawCart(){
  $("items").innerHTML=Object.keys(cart).map(c=>{const p=byCod(c);return `<div class="it"><div class="info">${p.n}<em>${money(p.p)} por caja</em></div><div class="mini"><button data-m="${c}">−</button><b>${cart[c]}</b><button data-a="${c}">+</button></div></div>`}).join("");
 
- $("tt").textContent=money(total());preparar();$("hint").style.display="none"}
+ $("tt").textContent=money(total());preparar();$("hint").style.display="none";$("txt").style.display="none"}
 // La imagen se arma de antemano para poder compartirla en el instante del toque
 let pedidoFile=null,pedidoBlob=null;
 function preparar(){
@@ -389,25 +390,43 @@ function buildOrderImage(){
  x.textAlign="right";x.font='800 20px '+F;x.fillText(money(total()),W-PAD-16,y+33);
  return cv;
 }
-function descargarYAbrirChat(msg){
- if(pedidoBlob){const a=document.createElement("a");a.href=URL.createObjectURL(pedidoBlob);a.download="pedido.png";
-  document.body.appendChild(a);a.click();a.remove()}
- const hint=$("hint");hint.textContent=msg;hint.style.display="block";
- window.open("https://wa.me/"+WHATSAPP,"_blank");
+const MOVIL=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+function motivo(e){
+ const ua=navigator.userAgent;
+ if(/FBAN|FBAV|Instagram|Line\/|MicroMessenger|WhatsApp/i.test(ua))return "Estás en el navegador interno de una app. Abre este enlace en Chrome (Android) o Safari (iPhone).";
+ if(/Firefox|FxiOS/i.test(ua))return "Firefox no permite compartir imágenes desde una página. Abre este enlace en Chrome (Android) o Safari (iPhone).";
+ if(!navigator.share)return "Este navegador no permite compartir. Abre este enlace en Chrome (Android) o Safari (iPhone).";
+ if(e)return "No se pudo abrir el menú de compartir ("+(e.name||e)+"). Abre este enlace en Chrome (Android) o Safari (iPhone).";
+ return "Este navegador no permite compartir imágenes. Abre este enlace en Chrome (Android) o Safari (iPhone).";
 }
+function textoPedido(){
+ let m="*Pedido*\n";
+ cats.forEach(c=>{const its=Object.keys(cart).map(byCod).filter(p=>p.c===c);
+  if(!its.length)return;
+  m+="\n*"+c.toUpperCase()+"*\n";
+  its.forEach(p=>{m+="• "+cart[p.cod]+(cart[p.cod]===1?" caja":" cajas")+" – "+p.n+" = "+money(p.p*cart[p.cod])+"\n"})});
+ return m+"\n*Total: "+money(total())+"*";
+}
+function fallo(e){
+ if(MOVIL){
+  // Celular sin soporte: explicar el motivo y ofrecer el pedido como texto
+  const h=$("hint");h.textContent=motivo(e);h.style.display="block";$("txt").style.display="block";
+ }else{
+  // Computadora: guarda la imagen y abre tu chat para adjuntarla
+  if(pedidoBlob){const a=document.createElement("a");a.href=URL.createObjectURL(pedidoBlob);a.download="pedido.png";
+   document.body.appendChild(a);a.click();a.remove()}
+  const h=$("hint");h.textContent="Se guardó pedido.png. Adjúntalo en el chat de WhatsApp que se abrió.";h.style.display="block";
+  window.open("https://wa.me/"+WHATSAPP,"_blank");
+ }
+}
+$("txt").onclick=()=>{if(Object.keys(cart).length)window.open("https://wa.me/"+WHATSAPP+"?text="+encodeURIComponent(textoPedido()),"_blank")};
 $("send").onclick=()=>{
  if(!Object.keys(cart).length)return;
  if(!pedidoFile){preparar();const h=$("hint");h.textContent="Preparando la imagen… vuelve a tocar el botón en un segundo.";h.style.display="block";return}
  if(navigator.canShare&&navigator.canShare({files:[pedidoFile]})){
-  // Celular: menú de compartir con la imagen (solo imagen, sin texto)
-  navigator.share({files:[pedidoFile]}).catch(e=>{
-   if(e&&e.name==="AbortError")return; // el cliente cerró el menú
-   descargarYAbrirChat("No se pudo abrir el menú de compartir. Se guardó pedido.png: adjúntalo en el chat de WhatsApp.");
-  });
- }else{
-  // Computadora o navegador sin compartir: guarda la imagen y abre tu chat
-  descargarYAbrirChat("Se guardó pedido.png. Adjúntalo en el chat de WhatsApp que se abrió.");
- }
+  // Menú de compartir con la imagen (solo imagen, sin texto)
+  navigator.share({files:[pedidoFile]}).catch(e=>{if(!(e&&e.name==="AbortError"))fallo(e)});
+ }else fallo();
 };
 draw();
 </script>
