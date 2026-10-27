@@ -41,7 +41,6 @@ input,textarea{width:100%;margin-top:10px;padding:12px;border:1px solid var(--bd
 .tot{display:flex;justify-content:space-between;font-size:1.2rem;font-weight:700;margin:14px 0}
 .go{width:100%;border:0;background:var(--wa);color:#06301a;font-weight:800;font-size:1.05rem;padding:15px;border-radius:12px}
 .cl{background:#000;border:0;color:#fff;width:100%;padding:15px;margin-top:10px;font-size:1.05rem;font-weight:700;border-radius:12px}
-#hint{display:none;color:var(--mut);font-size:.9rem;line-height:1.35;margin:10px 0 0;text-align:center}
 </style>
 </head>
 <body>
@@ -52,7 +51,6 @@ input,textarea{width:100%;margin-top:10px;padding:12px;border:1px solid var(--bd
   <div id="items"></div>
   <div class="tot"><span>Total</span><span id="tt"></span></div>
   <button class="go" id="send">Enviar pedido por WhatsApp</button>
-  <p id="hint"></p>
   <button class="cl" id="close">Seguir comprando</button>
 </div></div>
 <script>
@@ -381,22 +379,21 @@ function buildOrderImage(){
  x.textAlign="right";x.font='800 20px '+F;x.fillText(money(total()),W-PAD-16,y+33);
  return cv;
 }
-$("send").onclick=async()=>{
+$("send").onclick=()=>{
  if(!Object.keys(cart).length)return;
  const cv=buildOrderImage();
- const bp=new Promise(r=>cv.toBlob(r,"image/png"));
- // 1) Copiar la imagen al portapapeles (para pegarla en el chat)
- let copiado=false;
- try{await navigator.clipboard.write([new ClipboardItem({"image/png":bp})]);copiado=true}catch(e){}
- const blob=await bp;
- // 2) Guardar pedido.png (respaldo para adjuntarla si no se pega)
- const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="pedido.png";
- document.body.appendChild(a);a.click();a.remove();
- // 3) Abrir el chat con tu número, sin texto
- const url="https://wa.me/"+WHATSAPP;
- if(!window.open(url,"_blank"))location.href=url;
- const hint=$("hint");hint.style.display="block";
- hint.textContent=(copiado?"La imagen del pedido está copiada. En el chat de WhatsApp pégala (Ctrl+V, o mantén presionado el cuadro de mensaje y elige Pegar) y envíala. ":"")+"Si no se pega, adjunta el archivo pedido.png que se acaba de guardar.";
+ cv.toBlob(blob=>{
+  const file=new File([blob],"pedido.png",{type:"image/png"});
+  if(navigator.canShare&&navigator.canShare({files:[file]})){
+   // Celular: abre el menú de compartir; elige WhatsApp y tu contacto
+   navigator.share({files:[file],text:"Pedido"}).catch(()=>{});
+  }else{
+   // Computadora: descarga la imagen y abre el chat para adjuntarla
+   const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="pedido.png";
+   document.body.appendChild(a);a.click();a.remove();
+   window.open("https://wa.me/"+WHATSAPP+"?text="+encodeURIComponent("Pedido (imagen adjunta)"),"_blank");
+  }
+ },"image/png");
 };
 draw();
 </script>
