@@ -11,7 +11,7 @@
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--tx);font-family:-apple-system,"Segoe UI",system-ui,sans-serif;padding-bottom:100px}
 .wrap{max-width:640px;margin:auto;padding:0 16px}
-.top{padding:18px 0 4px;font-size:1.1rem;font-weight:700;color:var(--mut)}
+.top{background:#000;color:#fff;text-align:center;text-transform:uppercase;letter-spacing:.06em;font-size:1rem;font-weight:800;padding:9px 16px}
 .sec{padding:14px 0 6px;border-bottom:1px solid var(--bd)}
 .sh{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 .sh h2{margin:0;font-size:1.6rem;font-weight:600;text-transform:uppercase}
@@ -45,7 +45,8 @@ input,textarea{width:100%;margin-top:10px;padding:12px;border:1px solid var(--bd
 </style>
 </head>
 <body>
-<div class="wrap"><div class="top" id="shop"></div><div id="list"></div></div>
+<div class="top" id="shop"></div>
+<div class="wrap"><div id="list"></div></div>
 <button id="bar"><span id="bn"></span><span id="bt"></span></button>
 <div id="ov"><div id="sheet">
   <h2>Tu pedido</h2>
@@ -309,7 +310,7 @@ const PRODUCTOS = [
 const $=id=>document.getElementById(id);
 const money=n=>"$"+n.toLocaleString("es-MX",{minimumFractionDigits:2,maximumFractionDigits:2});
 let cart={},open={};
-document.title="Generar pedido";$("shop").textContent="Generar pedido";
+document.title="Generar pedido";$("shop").textContent="GENERAR PEDIDO";
 const cats=[...CATEGORIAS,...new Set(PRODUCTOS.map(p=>p.c))].filter((c,i,a)=>a.indexOf(c)===i);
 const byCod=c=>PRODUCTOS.find(p=>p.cod===c);
 function ctrl(p){const q=cart[p.cod]||0;
