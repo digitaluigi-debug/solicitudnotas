@@ -40,6 +40,7 @@ body{margin:0;background:var(--bg);color:var(--tx);font-family:-apple-system,"Se
 input,textarea{width:100%;margin-top:10px;padding:12px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);color:var(--tx);font:inherit}
 .tot{display:flex;justify-content:space-between;font-size:1.2rem;font-weight:700;margin:14px 0}
 .go{width:100%;border:0;background:var(--wa);color:#06301a;font-weight:800;font-size:1.05rem;padding:15px;border-radius:12px}
+#hint{display:none;color:var(--mut);font-size:.9rem;line-height:1.35;margin:10px 0 0;text-align:center}
 .cl{background:#000;border:0;color:#fff;width:100%;padding:15px;margin-top:10px;font-size:1.05rem;font-weight:700;border-radius:12px}
 </style>
 </head>
@@ -51,6 +52,7 @@ input,textarea{width:100%;margin-top:10px;padding:12px;border:1px solid var(--bd
   <div id="items"></div>
   <div class="tot"><span>Total</span><span id="tt"></span></div>
   <button class="go" id="send">Enviar pedido por WhatsApp</button>
+  <p id="hint"></p>
   <button class="cl" id="close">Seguir comprando</button>
 </div></div>
 <script>
@@ -322,7 +324,15 @@ function draw(){
 function total(){return Object.entries(cart).reduce((s,[c,q])=>s+byCod(c).p*q,0)}
 function drawCart(){
  $("items").innerHTML=Object.keys(cart).map(c=>{const p=byCod(c);return `<div class="it"><div class="info">${p.n}<em>${money(p.p)} por caja</em></div><div class="mini"><button data-m="${c}">−</button><b>${cart[c]}</b><button data-a="${c}">+</button></div></div>`}).join("");
- $("tt").textContent=money(total())}
+
+ $("tt").textContent=money(total());preparar();$("hint").style.display="none"}
+// La imagen se arma de antemano para poder compartirla en el instante del toque
+let pedidoFile=null,pedidoBlob=null;
+function preparar(){
+ pedidoFile=null;pedidoBlob=null;
+ if(!Object.keys(cart).length)return;
+ buildOrderImage().toBlob(b=>{if(!b)return;pedidoBlob=b;pedidoFile=new File([b],"pedido.png",{type:"image/png"})},"image/png");
+}
 document.addEventListener("click",e=>{const d=e.target.dataset;
  if(d.t){open[d.t]=!open[d.t]}
  else if(d.a){cart[d.a]=(cart[d.a]||0)+1}
@@ -379,21 +389,25 @@ function buildOrderImage(){
  x.textAlign="right";x.font='800 20px '+F;x.fillText(money(total()),W-PAD-16,y+33);
  return cv;
 }
+function descargarYAbrirChat(msg){
+ if(pedidoBlob){const a=document.createElement("a");a.href=URL.createObjectURL(pedidoBlob);a.download="pedido.png";
+  document.body.appendChild(a);a.click();a.remove()}
+ const hint=$("hint");hint.textContent=msg;hint.style.display="block";
+ window.open("https://wa.me/"+WHATSAPP,"_blank");
+}
 $("send").onclick=()=>{
  if(!Object.keys(cart).length)return;
- const cv=buildOrderImage();
- cv.toBlob(blob=>{
-  const file=new File([blob],"pedido.png",{type:"image/png"});
-  if(navigator.canShare&&navigator.canShare({files:[file]})){
-   // Celular: abre el menú de compartir; elige WhatsApp y tu contacto
-   navigator.share({files:[file],text:"Pedido"}).catch(()=>{});
-  }else{
-   // Computadora: descarga la imagen y abre el chat para adjuntarla
-   const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="pedido.png";
-   document.body.appendChild(a);a.click();a.remove();
-   window.open("https://wa.me/"+WHATSAPP+"?text="+encodeURIComponent("Pedido (imagen adjunta)"),"_blank");
-  }
- },"image/png");
+ if(!pedidoFile){preparar();const h=$("hint");h.textContent="Preparando la imagen… vuelve a tocar el botón en un segundo.";h.style.display="block";return}
+ if(navigator.canShare&&navigator.canShare({files:[pedidoFile]})){
+  // Celular: menú de compartir con la imagen (solo imagen, sin texto)
+  navigator.share({files:[pedidoFile]}).catch(e=>{
+   if(e&&e.name==="AbortError")return; // el cliente cerró el menú
+   descargarYAbrirChat("No se pudo abrir el menú de compartir. Se guardó pedido.png: adjúntalo en el chat de WhatsApp.");
+  });
+ }else{
+  // Computadora o navegador sin compartir: guarda la imagen y abre tu chat
+  descargarYAbrirChat("Se guardó pedido.png. Adjúntalo en el chat de WhatsApp que se abrió.");
+ }
 };
 draw();
 </script>
